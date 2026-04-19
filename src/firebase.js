@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut } from 'firebase/auth';
 import { getFirestore, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 
 // TODO: Replace with your actual Firebase project config
@@ -18,7 +18,7 @@ const firebaseConfig = {
 export const isFirebaseConfigured = firebaseConfig.apiKey !== "YOUR_API_KEY";
 
 // Admin email configuration - change this to your actual email
-export const ADMIN_EMAIL = "masterytbx@gmail.com";
+export const ADMIN_EMAIL = "ytbgamez469@gmail.com";
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
@@ -34,7 +34,18 @@ export const signInWithGoogle = async () => {
     const result = await signInWithPopup(auth, provider);
     return result.user;
   } catch (error) {
-    console.error("Error signing in with Google", error);
+    console.error("Error signing in with Google:", error);
+    
+    // Fallback to redirect if popup fails or is blocked
+    if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
+      alert("Popup blocked or failed! Redirecting to Google instead...");
+      try {
+        await signInWithRedirect(auth, provider);
+      } catch (redirectError) {
+        console.error("Redirect sign-in failed:", redirectError);
+        alert(`Login failed entirely: ${redirectError.message}`);
+      }
+    }
     return null;
   }
 };
