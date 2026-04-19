@@ -30,9 +30,7 @@ export default function AdminPanel({ user }) {
   }, [user, navigate]);
 
   const handleDelete = (id) => {
-    if (window.confirm("Are you sure you want to permanently delete this message?")) {
-      deleteMessage(id);
-    }
+    deleteMessage(id);
   };
 
   const handleEditClick = (msg) => {

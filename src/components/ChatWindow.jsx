@@ -97,9 +97,7 @@ export default function ChatWindow({ messages, currentUser, sendMessage, message
                           {dropdownOpen === msg.id && (
                             <div className="dropdown-menu">
                               <button onClick={() => handleEditInit(msg)}><Edit2 size={14}/> Edit</button>
-                              <button onClick={() => {
-                                if(window.confirm("Delete this message?")) deleteMessage(msg.id);
-                              }} className="delete-text"><Trash2 size={14}/> Delete</button>
+                              <button onClick={() => deleteMessage(msg.id)} className="delete-text"><Trash2 size={14}/> Delete</button>
                             </div>
                           )}
                         </div>
