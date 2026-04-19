@@ -18,8 +18,7 @@ export default function ChatWindow({ currentUser, selectedChat }) {
 
     const q = query(
       collection(db, 'messages'), 
-      where('chatId', '==', selectedChat.chatId),
-      orderBy('createdAt')
+      where('chatId', '==', selectedChat.chatId)
     );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -27,7 +26,15 @@ export default function ChatWindow({ currentUser, selectedChat }) {
       snapshot.forEach((doc) => {
         msgs.push({ ...doc.data(), id: doc.id });
       });
+      // Sort client-side to avoid needing a Firestore composite index
+      msgs.sort((a, b) => {
+        const timeA = a.createdAt?.toMillis() || Date.now();
+        const timeB = b.createdAt?.toMillis() || Date.now();
+        return timeA - timeB;
+      });
       setMessages(msgs);
+    }, (error) => {
+      console.error("Error fetching messages:", error);
     });
 
     return () => unsubscribe();
