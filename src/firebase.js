@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 
 // TODO: Replace with your actual Firebase project config
 const firebaseConfig = {
@@ -16,6 +16,9 @@ const firebaseConfig = {
 
 // Check if Firebase config is actually provided
 export const isFirebaseConfigured = firebaseConfig.apiKey !== "YOUR_API_KEY";
+
+// Admin email configuration - change this to your actual email
+export const ADMIN_EMAIL = "masterytbx@gmail.com";
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
@@ -41,5 +44,26 @@ export const logOut = async () => {
     await signOut(auth);
   } catch (error) {
     console.error("Error signing out", error);
+  }
+};
+
+// Delete a message by ID
+export const deleteMessage = async (messageId) => {
+  try {
+    await deleteDoc(doc(db, "messages", messageId));
+  } catch (error) {
+    console.error("Error deleting message: ", error);
+  }
+};
+
+// Edit a message by ID
+export const editMessage = async (messageId, newText) => {
+  try {
+    await updateDoc(doc(db, "messages", messageId), {
+      text: newText,
+      editedAt: new Date()
+    });
+  } catch (error) {
+    console.error("Error editing message: ", error);
   }
 };
