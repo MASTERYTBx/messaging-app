@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth, signInWithGoogle, logOut, isFirebaseConfigured } from './firebase';
+import { auth, signInWithGoogle, logOut, isFirebaseConfigured, saveUserToDB } from './firebase';
 import Login from './components/Login';
 import ChatLayout from './components/ChatLayout';
 import AdminPanel from './components/AdminPanel';
@@ -8,6 +8,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AnimatePresence } from 'framer-motion';
 import './index.css';
 import './admin.css';
+import './profile.css';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -18,7 +19,10 @@ function App() {
       setLoading(false);
       return;
     }
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        await saveUserToDB(currentUser);
+      }
       setUser(currentUser);
       setLoading(false);
     });

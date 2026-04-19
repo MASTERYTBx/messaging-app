@@ -78,3 +78,81 @@ export const editMessage = async (messageId, newText) => {
     console.error("Error editing message: ", error);
   }
 };
+
+import { setDoc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+
+// Save user to DB and ensure they have a username
+export const saveUserToDB = async (user) => {
+  if (!user) return;
+  const userRef = doc(db, "users", user.uid);
+  const userSnap = await getDoc(userRef);
+  
+  if (!userSnap.exists()) {
+    // Auto-generate a username based on email
+    const baseUsername = user.email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '');
+    let username = baseUsername;
+    let isUnique = await checkUsernameExists(username);
+    let counter = 1;
+    
+    while(isUnique) {
+      username = `${baseUsername}${counter}`;
+      isUnique = await checkUsernameExists(username);
+      counter++;
+    }
+
+    await setDoc(userRef, {
+      uid: user.uid,
+      email: user.email,
+      displayName: user.displayName,
+      photoURL: user.photoURL,
+      username: username,
+      createdAt: serverTimestamp()
+    });
+  }
+};
+
+// Check if a username is already taken
+export const checkUsernameExists = async (username) => {
+  const q = query(collection(db, "users"), where("username", "==", username));
+  const querySnapshot = await getDocs(q);
+  return !querySnapshot.empty;
+};
+
+// Update user's username
+export const updateUsername = async (uid, newUsername) => {
+  const userRef = doc(db, "users", uid);
+  await updateDoc(userRef, { username: newUsername });
+};
+
+// Search users by username
+export const searchUsersByUsername = async (searchTerm) => {
+  const q = query(collection(db, "users"), where("username", ">=", searchTerm), where("username", "<=", searchTerm + '\uf8ff'));
+  const querySnapshot = await getDocs(q);
+  let users = [];
+  querySnapshot.forEach((doc) => users.push(doc.data()));
+  return users;
+};
+
+// Get or Create a 1-on-1 chat
+export const getOrCreateChat = async (currentUser, targetUser) => {
+  // Chat ID is predictably generated to avoid duplicates (sort UIDs alphabetically)
+  const sortedUids = [currentUser.uid, targetUser.uid].sort();
+  const chatId = `${sortedUids[0]}_${sortedUids[1]}`;
+  
+  const chatRef = doc(db, "chats", chatId);
+  const chatSnap = await getDoc(chatRef);
+  
+  if (!chatSnap.exists()) {
+    await setDoc(chatRef, {
+      participants: [currentUser.uid, targetUser.uid],
+      participantDetails: {
+        [currentUser.uid]: { displayName: currentUser.displayName, photoURL: currentUser.photoURL, username: currentUser.username || currentUser.email.split('@')[0] },
+        [targetUser.uid]: { displayName: targetUser.displayName, photoURL: targetUser.photoURL, username: targetUser.username }
+      },
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      lastMessage: ""
+    });
+  }
+  return chatId;
+};

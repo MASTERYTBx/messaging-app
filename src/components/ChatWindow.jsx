@@ -1,14 +1,57 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Send, Smile, Paperclip, MoreVertical, Trash2, Edit2, X, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
-import { deleteMessage, editMessage } from '../firebase';
+import { deleteMessage, editMessage, db } from '../firebase';
+import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
 
-export default function ChatWindow({ messages, currentUser, sendMessage, messagesEndRef }) {
+export default function ChatWindow({ currentUser, selectedChat }) {
   const [text, setText] = useState('');
+  const [messages, setMessages] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(null);
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    if (!selectedChat) return;
+
+    const q = query(
+      collection(db, 'messages'), 
+      where('chatId', '==', selectedChat.chatId),
+      orderBy('createdAt')
+    );
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      let msgs = [];
+      snapshot.forEach((doc) => {
+        msgs.push({ ...doc.data(), id: doc.id });
+      });
+      setMessages(msgs);
+    });
+
+    return () => unsubscribe();
+  }, [selectedChat]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const sendMessage = async (text) => {
+    if (text.trim() === '' || !selectedChat) return;
+    try {
+      await addDoc(collection(db, 'messages'), {
+        chatId: selectedChat.chatId,
+        text,
+        uid: currentUser.uid,
+        displayName: currentUser.displayName,
+        photoURL: currentUser.photoURL,
+        createdAt: serverTimestamp()
+      });
+    } catch (e) {
+      console.error("Error adding message: ", e);
+    }
+  };
 
   const handleSend = (e) => {
     e.preventDefault();
@@ -17,10 +60,6 @@ export default function ChatWindow({ messages, currentUser, sendMessage, message
       setText('');
     }
   };
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, messagesEndRef]);
 
   const formatTime = (timestamp) => {
     if (!timestamp) return '';
@@ -38,14 +77,26 @@ export default function ChatWindow({ messages, currentUser, sendMessage, message
     setEditingId(null);
   };
 
+  if (!selectedChat) {
+    return (
+      <div className="chat-window empty-state">
+        <div className="empty-state-content">
+          <img src="/vite.svg" alt="App Logo" className="empty-logo" />
+          <h2>Welcome to Messaging App</h2>
+          <p>Search for a user by their @username to start chatting!</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="chat-window">
       <header className="chat-header">
         <div className="chat-header-info">
-          <img src="https://via.placeholder.com/40/00a884/ffffff?text=GC" alt="Chat Avatar" className="avatar" />
+          <img src={selectedChat.photoURL || 'https://via.placeholder.com/40'} alt="Chat Avatar" className="avatar" />
           <div className="chat-title-wrapper">
-            <h2 className="chat-title">Global Family Chat</h2>
-            <span className="chat-status">click here for contact info</span>
+            <h2 className="chat-title">{selectedChat.displayName}</h2>
+            <span className="chat-status">@{selectedChat.username}</span>
           </div>
         </div>
       </header>
