@@ -25,10 +25,6 @@ function App() {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         await saveUserToDB(currentUser);
-        // Request Notification Permission
-        if ('Notification' in window && Notification.permission === 'default') {
-          Notification.requestPermission();
-        }
       }
       setUser(currentUser);
       setLoading(false);

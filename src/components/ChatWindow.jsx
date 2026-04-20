@@ -222,6 +222,12 @@ export default function ChatWindow({ currentUser, selectedChat, onBack, isAdminS
                       <VerifiedBadge email={msg.email} size={12} />
                     </span>
                   )}
+                  {isSent && msg.email === ADMIN_EMAIL && (
+                    <span className="message-sender" style={{display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end', marginBottom: '4px'}}>
+                      {msg.displayName}
+                      <VerifiedBadge email={msg.email} size={12} />
+                    </span>
+                  )}
                   
                   {isEditing ? (
                     <div className="inline-edit">

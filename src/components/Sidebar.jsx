@@ -153,7 +153,7 @@ export default function Sidebar({ user, logOut, selectedChat, onSelectChat }) {
       <header className="sidebar-header">
         <div className="user-profile" onClick={() => setShowProfile(true)} style={{cursor: 'pointer'}}>
           <img src={user.photoURL || 'https://via.placeholder.com/40'} alt="User" className="avatar" />
-          <span className="user-name">Profile</span>
+          <span className="user-name">Profile <VerifiedBadge email={user.email} size={14} /></span>
         </div>
         <div className="sidebar-actions">
           {isAdmin && (
@@ -259,8 +259,47 @@ export default function Sidebar({ user, logOut, selectedChat, onSelectChat }) {
           </div>
         ) : (
           <div className="active-chats">
-            {activeChats.map(chat => {
-              // Find the other participant's details
+            {[...activeChats, ...channels].sort((a, b) => {
+              const timeA = a.updatedAt?.toMillis() || 0;
+              const timeB = b.updatedAt?.toMillis() || 0;
+              return timeB - timeA;
+            }).map(chat => {
+              // Check if it's a channel
+              if (chat.adminIds) {
+                const isActive = selectedChat?.chatId === chat.id;
+                return (
+                  <motion.div 
+                    key={`channel-${chat.id}`} 
+                    className={`contact-item ${isActive ? 'active' : ''}`} 
+                    onClick={() => onSelectChat({
+                      chatId: chat.id,
+                      isChannel: true,
+                      displayName: chat.name,
+                      username: 'channel',
+                      photoURL: 'https://via.placeholder.com/48/00a884/ffffff?text=CH',
+                      adminIds: chat.adminIds,
+                      isOfficial: chat.isOfficial
+                    })}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                  >
+                    <img src='https://via.placeholder.com/48/00a884/ffffff?text=CH' alt="Channel" className="avatar" />
+                    <div className="contact-info">
+                      <div className="contact-info-header">
+                        <h3 className="contact-name">
+                          {chat.name} 
+                          {chat.isOfficial && <VerifiedBadge email={ADMIN_EMAIL} size={14} />}
+                        </h3>
+                      </div>
+                      <p className="contact-last-message">
+                        {chat.lastMessage || 'Channel created'}
+                      </p>
+                    </div>
+                  </motion.div>
+                )
+              }
+
+              // Normal Chat
               const otherUid = chat.participants.find(id => id !== user.uid);
               const otherDetails = chat.participantDetails[otherUid];
               const isActive = selectedChat?.chatId === chat.id;
@@ -268,7 +307,7 @@ export default function Sidebar({ user, logOut, selectedChat, onSelectChat }) {
 
               return (
                 <motion.div 
-                  key={chat.id} 
+                  key={`chat-${chat.id}`} 
                   className={`contact-item ${isActive ? 'active' : ''}`} 
                   onClick={() => onSelectChat({
                     chatId: chat.id,

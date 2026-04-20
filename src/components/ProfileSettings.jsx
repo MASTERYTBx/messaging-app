@@ -31,8 +31,19 @@ export default function ProfileSettings({ user, onClose }) {
     fetchUserData();
   }, [user]);
 
-  const handleToggleDnD = () => {
-    setSettings(prev => ({ ...prev, dndEnabled: !prev.dndEnabled }));
+  const handleToggleDnD = async () => {
+    const newDnd = !settings.dndEnabled;
+    setSettings(prev => ({ ...prev, dndEnabled: newDnd }));
+    
+    // Request permission if they turn DnD OFF (want notifications)
+    if (!newDnd && 'Notification' in window) {
+      if (Notification.permission === 'default' || Notification.permission === 'denied') {
+        const perm = await Notification.requestPermission();
+        if (perm !== 'granted') {
+          alert("Please enable notifications in your device/browser settings to receive alerts.");
+        }
+      }
+    }
   };
 
   const handleThemeChange = (e) => {
