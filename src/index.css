@@ -51,24 +51,22 @@ body {
   align-items: center;
   height: 100vh;
   width: 100vw;
-  background-image: linear-gradient(to bottom, var(--primary-color) 0%, var(--primary-color) 130px, var(--bg-app) 130px, var(--bg-app) 100%);
+  background-color: var(--bg-panel);
 }
 
 .chat-layout {
   display: flex;
   width: 100%;
-  max-width: 1600px;
   height: 100%;
   background-color: var(--bg-panel);
-  box-shadow: 0 6px 18px rgba(11, 20, 26, 0.05);
   position: relative;
 }
 
 @media (min-width: 1024px) {
   .chat-layout {
-    height: calc(100vh - 38px);
-    top: -19px;
-    border-radius: 4px;
+    height: 100vh;
+    top: 0;
+    border-radius: 0;
     overflow: hidden;
   }
 }
@@ -442,4 +440,38 @@ body {
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* Custom Context Menu */
+.custom-context-menu {
+  position: fixed;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0;
+  min-width: 160px;
+  z-index: 1000;
+  animation: fadeIn 0.1s ease-out;
+}
+
+.custom-context-menu button {
+  background: none;
+  border: none;
+  padding: 10px 16px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text-main);
+  font-size: 0.95rem;
+  transition: background-color 0.2s;
+}
+
+.custom-context-menu button:hover {
+  background-color: var(--bg-hover);
+}
+
+.custom-context-menu button.danger {
+  color: #ef4444;
 }

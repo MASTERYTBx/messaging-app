@@ -72,13 +72,16 @@ export default function AdminPanel({ user }) {
 
   // If a chat is selected, we render Spectator Mode (ChatWindow)
   if (selectedChat) {
+    // Find the live version of this chat to keep isFrozen updated
+    const liveChat = conversations.find(c => c.id === selectedChat.id) || selectedChat;
+
     // Reformat selectedChat to match what ChatWindow expects
     const specChat = {
-      chatId: selectedChat.id,
+      chatId: liveChat.id,
       displayName: "Spectating Chat",
       username: "admin_view",
       photoURL: "https://via.placeholder.com/40/fbbf24/ffffff?text=AD",
-      isFrozen: selectedChat.isFrozen
+      isFrozen: liveChat.isFrozen
     };
 
     return (

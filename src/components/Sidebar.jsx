@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MoreVertical, MessageSquare, CircleDashed, ShieldAlert, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { ADMIN_EMAIL, searchUsersByUsername, getOrCreateChat, db } from '../firebase';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
 import { motion } from 'framer-motion';
 import ProfileSettings from './ProfileSettings';
 
@@ -14,6 +14,14 @@ export default function Sidebar({ user, logOut, selectedChat, onSelectChat }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [activeChats, setActiveChats] = useState([]);
+  const [contextMenu, setContextMenu] = useState(null);
+
+  // Close context menu on any click
+  useEffect(() => {
+    const handleClick = () => setContextMenu(null);
+    window.addEventListener('click', handleClick);
+    return () => window.removeEventListener('click', handleClick);
+  }, []);
 
   useEffect(() => {
     // Listen for chats where this user is a participant
@@ -43,6 +51,29 @@ export default function Sidebar({ user, logOut, selectedChat, onSelectChat }) {
     } else {
       setSearchResults([]);
     }
+  };
+
+  const handleContextMenu = (e, chat) => {
+    e.preventDefault();
+    setContextMenu({
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      chat: chat
+    });
+  };
+
+  const handleDeleteChat = async () => {
+    if (!contextMenu?.chat) return;
+    if (window.confirm("Are you sure you want to delete this conversation for both participants?")) {
+      await deleteDoc(doc(db, "chats", contextMenu.chat.id));
+      if (selectedChat?.chatId === contextMenu.chat.id) {
+        onSelectChat(null);
+      }
+    }
+  };
+
+  const handleMuteChat = () => {
+    alert("Chat muted! (Visual placeholder)");
   };
 
   const startChat = async (targetUser) => {
@@ -122,11 +153,16 @@ export default function Sidebar({ user, logOut, selectedChat, onSelectChat }) {
               const unreadCount = chat.unreadCount?.[user.uid] || 0;
 
               return (
-                <div key={chat.id} className={`contact-item ${isActive ? 'active' : ''}`} onClick={() => onSelectChat({
-                  chatId: chat.id,
-                  uid: otherUid,
-                  ...otherDetails
-                })}>
+                <div 
+                  key={chat.id} 
+                  className={`contact-item ${isActive ? 'active' : ''}`} 
+                  onClick={() => onSelectChat({
+                    chatId: chat.id,
+                    uid: otherUid,
+                    ...otherDetails
+                  })}
+                  onContextMenu={(e) => handleContextMenu(e, chat)}
+                >
                   <img src={otherDetails?.photoURL || 'https://via.placeholder.com/48'} alt="Avatar" className="avatar" />
                   <div className="contact-info">
                     <div className="contact-info-header">
@@ -143,6 +179,16 @@ export default function Sidebar({ user, logOut, selectedChat, onSelectChat }) {
           </div>
         )}
       </div>
+
+      {contextMenu && (
+        <div 
+          className="custom-context-menu"
+          style={{ top: contextMenu.mouseY, left: contextMenu.mouseX }}
+        >
+          <button onClick={handleDeleteChat} className="danger">Delete Chat</button>
+          <button onClick={handleMuteChat}>Mute Chat</button>
+        </div>
+      )}
 
       {showProfile && <ProfileSettings user={user} onClose={() => setShowProfile(false)} />}
     </motion.div>
