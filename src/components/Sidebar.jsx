@@ -24,7 +24,11 @@ export default function Sidebar({ user, logOut, selectedChat, onSelectChat }) {
         chats.push({ ...doc.data(), id: doc.id });
       });
       // Sort by updatedAt descending
-      chats.sort((a, b) => b.updatedAt?.toDate() - a.updatedAt?.toDate());
+      chats.sort((a, b) => {
+        const timeA = a.updatedAt?.toMillis() || Date.now();
+        const timeB = b.updatedAt?.toMillis() || Date.now();
+        return timeB - timeA;
+      });
       setActiveChats(chats);
     });
     return () => unsubscribe();

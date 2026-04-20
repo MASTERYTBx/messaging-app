@@ -1,0 +1,62 @@
+/* Mobile Layout & Read Receipts Styles */
+
+.read-receipt {
+  margin-left: 4px;
+  color: #8696a0; /* Default gray for sent */
+  display: inline-flex;
+  align-items: center;
+}
+
+.read-receipt.read {
+  color: #53bdeb; /* Blue for read */
+}
+
+.mobile-back-btn {
+  display: none;
+}
+
+/* Responsive Rules for WhatsApp Mobile Feel */
+@media (max-width: 768px) {
+  /* When a chat is active, hide the sidebar entirely */
+  .chat-layout.chat-active .sidebar {
+    display: none;
+  }
+  
+  /* When no chat is active, hide the chat window (empty state) entirely */
+  .chat-layout:not(.chat-active) .chat-window {
+    display: none;
+  }
+  
+  /* Expand whatever is visible to full width */
+  .sidebar {
+    width: 100%;
+    max-width: none;
+    border-right: none;
+  }
+  
+  .chat-window {
+    width: 100%;
+  }
+
+  /* Show the back button inside the Chat Window */
+  .mobile-back-btn {
+    display: flex;
+    align-items: center;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    margin-right: 12px;
+    padding: 8px 0;
+  }
+  
+  .mobile-back-btn:hover {
+    color: var(--text-main);
+  }
+  
+  /* Adjust message input padding for mobile */
+  .message-input-area {
+    padding: 10px;
+    gap: 8px;
+  }
+}

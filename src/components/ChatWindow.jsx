@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Smile, Paperclip, MoreVertical, Trash2, Edit2, X, Check, CheckCheck } from 'lucide-react';
+import { Send, Smile, Paperclip, MoreVertical, Trash2, Edit2, X, Check, CheckCheck, ArrowLeft } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { deleteMessage, editMessage, setTypingStatus, resetUnreadCount, markMessagesAsRead, addReaction, db } from '../firebase';
@@ -7,7 +7,7 @@ import { collection, query, where, onSnapshot, addDoc, serverTimestamp, updateDo
 
 const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
 
-export default function ChatWindow({ currentUser, selectedChat }) {
+export default function ChatWindow({ currentUser, selectedChat, onBack }) {
   const [text, setText] = useState('');
   const [messages, setMessages] = useState([]);
   const [editingId, setEditingId] = useState(null);
@@ -164,6 +164,9 @@ export default function ChatWindow({ currentUser, selectedChat }) {
     <div className="chat-window">
       <header className="chat-header">
         <div className="chat-header-info">
+          <button className="mobile-back-btn" onClick={onBack}>
+            <ArrowLeft size={20} />
+          </button>
           <img src={selectedChat.photoURL || 'https://via.placeholder.com/40'} alt="Chat Avatar" className="avatar" />
           <div className="chat-title-wrapper">
             <h2 className="chat-title">{selectedChat.displayName}</h2>
