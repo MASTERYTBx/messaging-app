@@ -165,6 +165,18 @@ export const getOrCreateChat = async (currentUser, targetUser) => {
   return chatId;
 };
 
+// --- Moderation Functions ---
+
+export const toggleUserBan = async (uid, isBanned) => {
+  const userRef = doc(db, "users", uid);
+  await updateDoc(userRef, { banned: isBanned });
+};
+
+export const toggleChatFreeze = async (chatId, isFrozen) => {
+  const chatRef = doc(db, "chats", chatId);
+  await updateDoc(chatRef, { isFrozen: isFrozen });
+};
+
 // --- New Advanced Chat Features ---
 
 export const setTypingStatus = async (chatId, uid, isTyping) => {

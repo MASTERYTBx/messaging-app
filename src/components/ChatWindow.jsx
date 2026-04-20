@@ -2,12 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Send, Smile, Paperclip, MoreVertical, Trash2, Edit2, X, Check, CheckCheck, ArrowLeft } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
-import { deleteMessage, editMessage, setTypingStatus, resetUnreadCount, markMessagesAsRead, addReaction, db } from '../firebase';
+import { deleteMessage, editMessage, setTypingStatus, resetUnreadCount, markMessagesAsRead, addReaction, toggleChatFreeze, db } from '../firebase';
 import { collection, query, where, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, increment } from 'firebase/firestore';
 
 const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
 
-export default function ChatWindow({ currentUser, selectedChat, onBack }) {
+export default function ChatWindow({ currentUser, selectedChat, onBack, isAdminSpectator = false }) {
   const [text, setText] = useState('');
   const [messages, setMessages] = useState([]);
   const [editingId, setEditingId] = useState(null);
@@ -169,12 +169,22 @@ export default function ChatWindow({ currentUser, selectedChat, onBack }) {
           </button>
           <img src={selectedChat.photoURL || 'https://via.placeholder.com/40'} alt="Chat Avatar" className="avatar" />
           <div className="chat-title-wrapper">
-            <h2 className="chat-title">{selectedChat.displayName}</h2>
+            <h2 className="chat-title">
+              {selectedChat.displayName} {selectedChat.isFrozen && <span className="frozen-tag">(Frozen)</span>}
+            </h2>
             <span className="chat-status">
-              {isOtherTyping ? <span className="typing-text">typing...</span> : `@${selectedChat.username}`}
+              {isAdminSpectator ? 'Admin Spectator Mode' : (isOtherTyping ? <span className="typing-text">typing...</span> : `@${selectedChat.username}`)}
             </span>
           </div>
         </div>
+        {isAdminSpectator && (
+          <button 
+            className={`admin-freeze-btn ${selectedChat.isFrozen ? 'unfreeze' : ''}`}
+            onClick={() => toggleChatFreeze(selectedChat.chatId, !selectedChat.isFrozen)}
+          >
+            {selectedChat.isFrozen ? 'Unfreeze Chat' : 'Freeze Chat'}
+          </button>
+        )}
       </header>
 
       <div className="messages-area">
@@ -257,7 +267,7 @@ export default function ChatWindow({ currentUser, selectedChat, onBack }) {
                           </div>
                         )}
 
-                        {isSent && (
+                        {isAdminSpectator || isSent ? (
                           <>
                             <MoreVertical 
                               className="msg-more-icon" 
@@ -271,7 +281,7 @@ export default function ChatWindow({ currentUser, selectedChat, onBack }) {
                               </div>
                             )}
                           </>
-                        )}
+                        ) : null}
                       </div>
                     </>
                   )}
@@ -298,20 +308,30 @@ export default function ChatWindow({ currentUser, selectedChat, onBack }) {
         <div ref={messagesEndRef} />
       </div>
 
-      <form className="message-input-area" onSubmit={sendMessage}>
-        <Smile className="input-icon" onClick={() => alert("Emoji picker coming soon!")} />
-        <Paperclip className="input-icon" onClick={() => alert("File attachments coming soon!")} />
-        <input 
-          type="text" 
-          className="message-input" 
-          placeholder="Type a message" 
-          value={text}
-          onChange={handleTyping}
-        />
-        <button type="submit" className="send-btn" disabled={!text.trim()}>
-          <Send className="send-icon" />
-        </button>
-      </form>
+      {isAdminSpectator ? (
+        <div className="frozen-chat-notice">
+          <p>You are spectating this chat. You cannot send messages.</p>
+        </div>
+      ) : selectedChat.isFrozen ? (
+        <div className="frozen-chat-notice">
+          <p>This chat has been frozen by an admin.</p>
+        </div>
+      ) : (
+        <form className="message-input-area" onSubmit={sendMessage}>
+          <Smile className="input-icon" onClick={() => alert("Emoji picker coming soon!")} />
+          <Paperclip className="input-icon" onClick={() => alert("File attachments coming soon!")} />
+          <input 
+            type="text" 
+            className="message-input" 
+            placeholder="Type a message" 
+            value={text}
+            onChange={handleTyping}
+          />
+          <button type="submit" className="send-btn" disabled={!text.trim()}>
+            <Send className="send-icon" />
+          </button>
+        </form>
+      )}
     </div>
   );
 }

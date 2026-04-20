@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth, signInWithGoogle, logOut, isFirebaseConfigured, saveUserToDB } from './firebase';
+import { auth, signInWithGoogle, logOut, isFirebaseConfigured, saveUserToDB, db } from './firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 import Login from './components/Login';
 import ChatLayout from './components/ChatLayout';
 import AdminPanel from './components/AdminPanel';
@@ -30,6 +31,17 @@ function App() {
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    const unsub = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
+      if (docSnap.exists() && docSnap.data().banned) {
+        alert("You have been banned from using this app.");
+        logOut();
+      }
+    });
+    return () => unsub();
+  }, [user]);
 
   if (loading) {
     return (
