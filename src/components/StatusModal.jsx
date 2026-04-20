@@ -18,14 +18,16 @@ export default function StatusModal({ user, onClose }) {
 
     const q = query(
       collection(db, 'statuses'),
-      where('createdAt', '>', yesterday),
       orderBy('createdAt', 'desc')
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       let fetched = [];
       snapshot.forEach(doc => {
-        fetched.push({ id: doc.id, ...doc.data() });
+        const data = doc.data();
+        if (data.createdAt && data.createdAt.toMillis() > yesterday.getTime()) {
+          fetched.push({ id: doc.id, ...data });
+        }
       });
       setStatuses(fetched);
       setLoading(false);

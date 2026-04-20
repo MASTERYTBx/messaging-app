@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { deleteMessage, editMessage, setTypingStatus, resetUnreadCount, markMessagesAsRead, addReaction, toggleChatFreeze, db, ADMIN_EMAIL } from '../firebase';
 import { collection, query, where, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, increment } from 'firebase/firestore';
 import VerifiedBadge from './VerifiedBadge';
+import { useAlert } from './CustomAlert';
+import UserProfileModal from './UserProfileModal';
 
 const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
 
@@ -16,6 +18,8 @@ export default function ChatWindow({ currentUser, selectedChat, onBack, isAdminS
   const [dropdownOpen, setDropdownOpen] = useState(null);
   const [reactionOpen, setReactionOpen] = useState(null);
   const [isOtherTyping, setIsOtherTyping] = useState(false);
+  const [viewingProfile, setViewingProfile] = useState(null);
+  const { showAlert } = useAlert();
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
@@ -110,12 +114,16 @@ export default function ChatWindow({ currentUser, selectedChat, onBack, isAdminS
         createdAt: serverTimestamp()
       });
 
-      await updateDoc(doc(db, 'chats', selectedChat.chatId), {
+      const targetCollection = selectedChat.isChannel ? 'channels' : 'chats';
+      const updateData = {
         updatedAt: serverTimestamp(),
         lastMessage: msgText,
         lastMessageSender: currentUser.uid,
-        [`unreadCount.${selectedChat.uid}`]: increment(1)
-      });
+      };
+      if (!selectedChat.isChannel) {
+        updateData[`unreadCount.${selectedChat.uid}`] = increment(1);
+      }
+      await updateDoc(doc(db, targetCollection, selectedChat.chatId), updateData);
     } catch (err) {
       console.error("Error sending message: ", err);
     }
@@ -170,7 +178,15 @@ export default function ChatWindow({ currentUser, selectedChat, onBack, isAdminS
           <button className="mobile-back-btn" onClick={onBack}>
             <ArrowLeft size={20} />
           </button>
-          <img src={selectedChat.photoURL || 'https://via.placeholder.com/40'} alt="Chat Avatar" className="avatar" />
+          <img 
+            src={selectedChat.photoURL || 'https://via.placeholder.com/48'} 
+            alt="Avatar" 
+            className="avatar" 
+            onClick={() => {
+              if (!selectedChat.isChannel) setViewingProfile(selectedChat);
+            }} 
+            style={{cursor: selectedChat.isChannel ? 'default' : 'pointer'}} 
+          />
           <div className="chat-title-wrapper">
             <h2 className="chat-title">
               {selectedChat.displayName} 
@@ -338,19 +354,36 @@ export default function ChatWindow({ currentUser, selectedChat, onBack, isAdminS
         </div>
       ) : (
         <form className="message-input-area" onSubmit={sendMessage}>
-          <Smile className="input-icon" onClick={() => alert("Emoji picker coming soon!")} />
-          <Paperclip className="input-icon" onClick={() => alert("File attachments coming soon!")} />
-          <input 
-            type="text" 
-            className="message-input" 
+          <Smile className="input-icon" onClick={() => showAlert("Emoji picker coming soon!")} />
+          <Paperclip className="input-icon" onClick={() => showAlert("File attachments coming soon!")} />
+          <textarea 
+            className="message-input multi-line-input" 
             placeholder="Type a message" 
             value={text}
             onChange={handleTyping}
+            rows={1}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage(e);
+              }
+            }}
+            onInput={(e) => {
+              e.target.style.height = 'auto';
+              e.target.style.height = (e.target.scrollHeight) + 'px';
+            }}
           />
           <button type="submit" className="send-btn" disabled={!text.trim()}>
             <Send className="send-icon" />
           </button>
         </form>
+      )}
+
+      {viewingProfile && (
+        <UserProfileModal 
+          profileUser={viewingProfile} 
+          onClose={() => setViewingProfile(null)} 
+        />
       )}
     </div>
   );

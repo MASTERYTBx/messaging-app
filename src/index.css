@@ -331,7 +331,8 @@ body {
 }
 
 .message-bubble {
-  max-width: 65%;
+  max-width: 75%;
+  width: fit-content;
   padding: 6px 8px 8px 10px;
   border-radius: 8px;
   box-shadow: var(--shadow-light);
@@ -348,6 +349,23 @@ body {
 .message-wrapper.received .message-bubble {
   background-color: var(--msg-received);
   border-top-left-radius: 0;
+}
+
+/* Hover Actions */
+.message-actions-dropdown {
+  position: absolute;
+  top: 4px; right: 4px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  background-color: rgba(32, 44, 51, 0.85);
+  padding: 2px 4px;
+  border-radius: 12px;
+}
+
+.message-bubble:hover .message-actions-dropdown {
+  opacity: 1;
 }
 
 .message-sender {
@@ -390,11 +408,19 @@ body {
   flex: 1;
   background-color: var(--bg-panel);
   border: none;
-  padding: 12px 16px;
+  padding: 10px 15px;
   border-radius: 8px;
   color: var(--text-main);
-  font-size: 1rem;
   outline: none;
+  font-size: 0.95rem;
+}
+
+.multi-line-input {
+  resize: none;
+  min-height: 40px;
+  max-height: 120px;
+  overflow-y: auto;
+  line-height: 1.4;
 }
 
 .send-btn {

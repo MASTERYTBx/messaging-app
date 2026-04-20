@@ -8,10 +8,12 @@ import ProfileSettings from './ProfileSettings';
 import VerifiedBadge from './VerifiedBadge';
 import StatusModal from './StatusModal';
 import CreateChannelModal from './CreateChannelModal';
+import { useAlert } from './CustomAlert';
 
 export default function Sidebar({ user, logOut, selectedChat, onSelectChat }) {
   const navigate = useNavigate();
   const isAdmin = user?.email === ADMIN_EMAIL;
+  const { showConfirm, showAlert } = useAlert();
   
   const [showProfile, setShowProfile] = useState(false);
   const [showStatus, setShowStatus] = useState(false);
@@ -118,16 +120,16 @@ export default function Sidebar({ user, logOut, selectedChat, onSelectChat }) {
 
   const handleDeleteChat = async () => {
     if (!contextMenu?.chat) return;
-    if (window.confirm("Are you sure you want to delete this conversation for both participants?")) {
+    showConfirm("Are you sure you want to delete this conversation for both participants?", async () => {
       await deleteDoc(doc(db, "chats", contextMenu.chat.id));
       if (selectedChat?.chatId === contextMenu.chat.id) {
         onSelectChat(null);
       }
-    }
+    });
   };
 
   const handleMuteChat = () => {
-    alert("Chat muted! (Visual placeholder)");
+    showAlert("Chat muted! (Visual placeholder)");
   };
 
   const startChat = async (targetUser) => {
@@ -167,7 +169,7 @@ export default function Sidebar({ user, logOut, selectedChat, onSelectChat }) {
           <MessageSquare className="action-icon" onClick={() => setActiveTab('chats')} title="Chats" />
           <div className="dropdown">
             <MoreVertical className="action-icon" onClick={() => {
-              if (window.confirm("Do you want to log out?")) logOut();
+              showConfirm("Do you want to log out?", () => logOut());
             }} />
           </div>
         </div>

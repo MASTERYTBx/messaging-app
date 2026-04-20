@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { X, Check, Loader2, Bell, Moon, User as UserIcon } from 'lucide-react';
 import { updateUsername, checkUsernameExists, updateUserSettings, db } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import { useAlert } from './CustomAlert';
 
 export default function ProfileSettings({ user, onClose }) {
   const [username, setUsername] = useState('');
@@ -13,6 +14,7 @@ export default function ProfileSettings({ user, onClose }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const { showAlert } = useAlert();
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -40,7 +42,7 @@ export default function ProfileSettings({ user, onClose }) {
       if (Notification.permission === 'default' || Notification.permission === 'denied') {
         const perm = await Notification.requestPermission();
         if (perm !== 'granted') {
-          alert("Please enable notifications in your device/browser settings to receive alerts.");
+          showAlert("Please enable notifications in your device/browser settings to receive alerts.");
         }
       }
     }

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, signInWithGoogle, logOut, isFirebaseConfigured, saveUserToDB, db } from './firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { useAlert } from './components/CustomAlert';
 import Login from './components/Login';
 import ChatLayout from './components/ChatLayout';
 import AdminPanel from './components/AdminPanel';
@@ -16,6 +17,7 @@ import './features.css';
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { showAlert } = useAlert();
 
   useEffect(() => {
     if (!isFirebaseConfigured) {
@@ -38,7 +40,7 @@ function App() {
       if (docSnap.exists()) {
         const data = docSnap.data();
         if (data.banned) {
-          alert("You have been banned from using this app.");
+          showAlert("You have been banned from using this app.");
           logOut();
         } else {
           setUser(prev => ({...prev, settings: data.settings}));
@@ -57,7 +59,11 @@ function App() {
   if (loading) {
     return (
       <div className="loading-screen">
-        <div className="spinner"></div>
+        <div style={{textAlign: 'center'}}>
+          <img src="/app-icon.svg" alt="Logo" style={{width: '80px', marginBottom: '24px', animation: 'pulse 2s infinite'}} />
+          <div className="spinner" style={{margin: '0 auto'}}></div>
+          <p style={{marginTop: '24px', color: 'var(--text-secondary)', fontSize: '0.9rem', letterSpacing: '1px'}}>BY MASTERYOUSHA</p>
+        </div>
       </div>
     );
   }
