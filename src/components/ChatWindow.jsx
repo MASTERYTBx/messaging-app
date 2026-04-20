@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Smile, Paperclip, MoreVertical, Trash2, Edit2, X, Check } from 'lucide-react';
-import { format } from 'date-fns';
+import { Send, Smile, Paperclip, MoreVertical, Trash2, Edit2, X, Check, CheckCheck } from 'lucide-react';
+import { format, isToday, isYesterday } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
-import { deleteMessage, editMessage, db } from '../firebase';
-import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
+import { deleteMessage, editMessage, setTypingStatus, resetUnreadCount, markMessagesAsRead, addReaction, db } from '../firebase';
+import { collection, query, where, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, increment } from 'firebase/firestore';
+
+const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
 
 export default function ChatWindow({ currentUser, selectedChat }) {
   const [text, setText] = useState('');
@@ -11,66 +13,109 @@ export default function ChatWindow({ currentUser, selectedChat }) {
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(null);
+  const [reactionOpen, setReactionOpen] = useState(null);
+  const [isOtherTyping, setIsOtherTyping] = useState(false);
   const messagesEndRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
   useEffect(() => {
     if (!selectedChat) return;
 
-    const q = query(
-      collection(db, 'messages'), 
-      where('chatId', '==', selectedChat.chatId)
-    );
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    // 1. Fetch Messages
+    const qMsgs = query(collection(db, 'messages'), where('chatId', '==', selectedChat.chatId));
+    const unsubMsgs = onSnapshot(qMsgs, (snapshot) => {
       let msgs = [];
-      snapshot.forEach((doc) => {
-        msgs.push({ ...doc.data(), id: doc.id });
+      let hasUnreadFromOther = false;
+      
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        msgs.push({ ...data, id: docSnap.id });
+        if (data.uid !== currentUser.uid && data.status === 'sent') {
+          hasUnreadFromOther = true;
+        }
       });
-      // Sort client-side to avoid needing a Firestore composite index
+      
       msgs.sort((a, b) => {
         const timeA = a.createdAt?.toMillis() || Date.now();
         const timeB = b.createdAt?.toMillis() || Date.now();
         return timeA - timeB;
       });
+      
       setMessages(msgs);
-    }, (error) => {
-      console.error("Error fetching messages:", error);
+
+      // If we are looking at the chat and there are unread messages, mark them read
+      if (hasUnreadFromOther) {
+        markMessagesAsRead(selectedChat.chatId, currentUser.uid);
+        resetUnreadCount(selectedChat.chatId, currentUser.uid);
+      }
     });
 
-    return () => unsubscribe();
-  }, [selectedChat]);
+    // 2. Listen to Chat Document for typing status
+    const unsubChat = onSnapshot(doc(db, 'chats', selectedChat.chatId), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.typing && data.typing[selectedChat.uid]) {
+          setIsOtherTyping(true);
+        } else {
+          setIsOtherTyping(false);
+        }
+      }
+    });
+
+    // Initial reset of unread
+    resetUnreadCount(selectedChat.chatId, currentUser.uid);
+    markMessagesAsRead(selectedChat.chatId, currentUser.uid);
+
+    return () => {
+      unsubMsgs();
+      unsubChat();
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      setTypingStatus(selectedChat.chatId, currentUser.uid, false);
+    };
+  }, [selectedChat, currentUser.uid]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, isOtherTyping]);
 
-  const sendMessage = async (text) => {
+  const handleTyping = (e) => {
+    setText(e.target.value);
+    setTypingStatus(selectedChat.chatId, currentUser.uid, true);
+    
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      setTypingStatus(selectedChat.chatId, currentUser.uid, false);
+    }, 2000);
+  };
+
+  const sendMessage = async (e) => {
+    e.preventDefault();
     if (text.trim() === '' || !selectedChat) return;
+    
+    const msgText = text;
+    setText('');
+    setTypingStatus(selectedChat.chatId, currentUser.uid, false);
+
     try {
       await addDoc(collection(db, 'messages'), {
         chatId: selectedChat.chatId,
-        text,
+        text: msgText,
         uid: currentUser.uid,
         displayName: currentUser.displayName,
         photoURL: currentUser.photoURL,
+        status: 'sent',
+        reactions: {},
         createdAt: serverTimestamp()
       });
-    } catch (e) {
-      console.error("Error adding message: ", e);
-    }
-  };
 
-  const handleSend = (e) => {
-    e.preventDefault();
-    if (text.trim()) {
-      sendMessage(text);
-      setText('');
+      await updateDoc(doc(db, 'chats', selectedChat.chatId), {
+        updatedAt: serverTimestamp(),
+        lastMessage: msgText,
+        [`unreadCount.${selectedChat.uid}`]: increment(1)
+      });
+    } catch (err) {
+      console.error("Error sending message: ", err);
     }
-  };
-
-  const formatTime = (timestamp) => {
-    if (!timestamp) return '';
-    return format(timestamp.toDate(), 'HH:mm');
   };
 
   const handleEditInit = (msg) => {
@@ -79,10 +124,29 @@ export default function ChatWindow({ currentUser, selectedChat }) {
     setDropdownOpen(null);
   };
 
-  const handleEditSave = (id) => {
-    editMessage(id, editText);
-    setEditingId(null);
+  const handleReaction = (msgId, emoji) => {
+    addReaction(msgId, currentUser.uid, emoji);
+    setReactionOpen(null);
   };
+
+  // Group Messages by Date
+  const groupedMessages = [];
+  let lastDate = null;
+
+  messages.forEach(msg => {
+    const msgDateObj = msg.createdAt ? msg.createdAt.toDate() : new Date();
+    const dateStr = msgDateObj.toDateString();
+    
+    if (dateStr !== lastDate) {
+      let displayDate = format(msgDateObj, 'MMMM d, yyyy');
+      if (isToday(msgDateObj)) displayDate = 'Today';
+      else if (isYesterday(msgDateObj)) displayDate = 'Yesterday';
+      
+      groupedMessages.push({ type: 'date', text: displayDate, id: `date-${dateStr}` });
+      lastDate = dateStr;
+    }
+    groupedMessages.push({ type: 'message', ...msg });
+  });
 
   if (!selectedChat) {
     return (
@@ -103,14 +167,25 @@ export default function ChatWindow({ currentUser, selectedChat }) {
           <img src={selectedChat.photoURL || 'https://via.placeholder.com/40'} alt="Chat Avatar" className="avatar" />
           <div className="chat-title-wrapper">
             <h2 className="chat-title">{selectedChat.displayName}</h2>
-            <span className="chat-status">@{selectedChat.username}</span>
+            <span className="chat-status">
+              {isOtherTyping ? <span className="typing-text">typing...</span> : `@${selectedChat.username}`}
+            </span>
           </div>
         </div>
       </header>
 
       <div className="messages-area">
         <AnimatePresence>
-          {messages.map((msg) => {
+          {groupedMessages.map((item) => {
+            if (item.type === 'date') {
+              return (
+                <div key={item.id} className="date-separator">
+                  <span>{item.text}</span>
+                </div>
+              );
+            }
+
+            const msg = item;
             const isSent = msg.uid === currentUser.uid;
             const isEditing = editingId === msg.id;
 
@@ -122,7 +197,7 @@ export default function ChatWindow({ currentUser, selectedChat }) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2 }}
               >
-                <div className="message-bubble" onMouseLeave={() => setDropdownOpen(null)}>
+                <div className="message-bubble" onMouseLeave={() => {setDropdownOpen(null); setReactionOpen(null)}}>
                   {!isSent && <span className="message-sender">{msg.displayName}</span>}
                   
                   {isEditing ? (
@@ -132,9 +207,9 @@ export default function ChatWindow({ currentUser, selectedChat }) {
                         value={editText} 
                         onChange={(e) => setEditText(e.target.value)}
                         autoFocus
-                        onKeyDown={(e) => { if(e.key === 'Enter') handleEditSave(msg.id) }}
+                        onKeyDown={(e) => { if(e.key === 'Enter') { editMessage(msg.id, editText); setEditingId(null); } }}
                       />
-                      <button onClick={() => handleEditSave(msg.id)} className="save-btn"><Check size={14}/></button>
+                      <button onClick={() => { editMessage(msg.id, editText); setEditingId(null); }} className="save-btn"><Check size={14}/></button>
                       <button onClick={() => setEditingId(null)} className="cancel-btn"><X size={14}/></button>
                     </div>
                   ) : (
@@ -143,34 +218,84 @@ export default function ChatWindow({ currentUser, selectedChat }) {
                         {msg.text}
                         {msg.editedAt && <span className="edited-indicator"> (edited)</span>}
                       </p>
-                      <span className="message-time">{formatTime(msg.createdAt)}</span>
                       
-                      {isSent && (
-                        <div className="message-actions-dropdown">
-                          <MoreVertical 
-                            className="msg-more-icon" 
-                            size={16} 
-                            onClick={() => setDropdownOpen(dropdownOpen === msg.id ? null : msg.id)} 
-                          />
-                          {dropdownOpen === msg.id && (
-                            <div className="dropdown-menu">
-                              <button onClick={() => handleEditInit(msg)}><Edit2 size={14}/> Edit</button>
-                              <button onClick={() => deleteMessage(msg.id)} className="delete-text"><Trash2 size={14}/> Delete</button>
-                            </div>
-                          )}
+                      <div className="message-meta">
+                        <span className="message-time">
+                          {msg.createdAt ? format(msg.createdAt.toDate(), 'HH:mm') : ''}
+                        </span>
+                        {isSent && (
+                          <span className="message-status">
+                            {msg.status === 'read' ? <CheckCheck size={14} className="read-tick" /> : <Check size={14} className="sent-tick" />}
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* Reactions Display */}
+                      {msg.reactions && Object.keys(msg.reactions).length > 0 && (
+                        <div className="reactions-display">
+                          {Object.values(msg.reactions).map((emoji, idx) => (
+                            <span key={idx} className="reaction-emoji">{emoji}</span>
+                          ))}
                         </div>
                       )}
+
+                      {/* Hover Actions */}
+                      <div className="message-actions-dropdown">
+                        <Smile 
+                          className="msg-more-icon react-icon" 
+                          size={14} 
+                          onClick={() => setReactionOpen(reactionOpen === msg.id ? null : msg.id)} 
+                        />
+                        {reactionOpen === msg.id && (
+                          <div className="reaction-popover">
+                            {EMOJIS.map(emoji => (
+                              <span key={emoji} onClick={() => handleReaction(msg.id, emoji)}>{emoji}</span>
+                            ))}
+                          </div>
+                        )}
+
+                        {isSent && (
+                          <>
+                            <MoreVertical 
+                              className="msg-more-icon" 
+                              size={16} 
+                              onClick={() => setDropdownOpen(dropdownOpen === msg.id ? null : msg.id)} 
+                            />
+                            {dropdownOpen === msg.id && (
+                              <div className="dropdown-menu">
+                                <button onClick={() => handleEditInit(msg)}><Edit2 size={14}/> Edit</button>
+                                <button onClick={() => deleteMessage(msg.id)} className="delete-text"><Trash2 size={14}/> Delete</button>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </>
                   )}
                 </div>
               </motion.div>
             );
           })}
+          
+          {isOtherTyping && (
+            <motion.div 
+              className="message-wrapper received"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <div className="message-bubble typing-bubble">
+                <span className="typing-dot"></span>
+                <span className="typing-dot"></span>
+                <span className="typing-dot"></span>
+              </div>
+            </motion.div>
+          )}
+
         </AnimatePresence>
         <div ref={messagesEndRef} />
       </div>
 
-      <form className="message-input-area" onSubmit={handleSend}>
+      <form className="message-input-area" onSubmit={sendMessage}>
         <Smile className="input-icon" onClick={() => alert("Emoji picker coming soon!")} />
         <Paperclip className="input-icon" onClick={() => alert("File attachments coming soon!")} />
         <input 
@@ -178,7 +303,7 @@ export default function ChatWindow({ currentUser, selectedChat }) {
           className="message-input" 
           placeholder="Type a message" 
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={handleTyping}
         />
         <button type="submit" className="send-btn" disabled={!text.trim()}>
           <Send className="send-icon" />

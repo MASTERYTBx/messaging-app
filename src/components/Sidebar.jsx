@@ -115,6 +115,7 @@ export default function Sidebar({ user, logOut, selectedChat, onSelectChat }) {
               const otherUid = chat.participants.find(id => id !== user.uid);
               const otherDetails = chat.participantDetails[otherUid];
               const isActive = selectedChat?.chatId === chat.id;
+              const unreadCount = chat.unreadCount?.[user.uid] || 0;
 
               return (
                 <div key={chat.id} className={`contact-item ${isActive ? 'active' : ''}`} onClick={() => onSelectChat({
@@ -124,8 +125,13 @@ export default function Sidebar({ user, logOut, selectedChat, onSelectChat }) {
                 })}>
                   <img src={otherDetails?.photoURL || 'https://via.placeholder.com/48'} alt="Avatar" className="avatar" />
                   <div className="contact-info">
-                    <h3 className="contact-name">{otherDetails?.displayName} <span style={{fontSize: '0.75rem', color: '#8696a0'}}>@{otherDetails?.username}</span></h3>
-                    <p className="contact-last-message">{chat.lastMessage || 'Start chatting!'}</p>
+                    <div className="contact-info-header">
+                      <h3 className="contact-name">{otherDetails?.displayName} <span style={{fontSize: '0.75rem', color: '#8696a0'}}>@{otherDetails?.username}</span></h3>
+                      {unreadCount > 0 && <span className="unread-badge">{unreadCount}</span>}
+                    </div>
+                    <p className={`contact-last-message ${unreadCount > 0 ? 'unread-bold' : ''}`}>
+                      {chat.lastMessage || 'Start chatting!'}
+                    </p>
                   </div>
                 </div>
               )

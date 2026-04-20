@@ -9,6 +9,7 @@ import { AnimatePresence } from 'framer-motion';
 import './index.css';
 import './admin.css';
 import './profile.css';
+import './features.css';
 
 function App() {
   const [user, setUser] = useState(null);

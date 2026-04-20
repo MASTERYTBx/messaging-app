@@ -1,0 +1,146 @@
+/* Advanced Features CSS */
+
+/* Unread Badges & Bold Text */
+.contact-info-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.unread-badge {
+  background-color: #25d366; /* WhatsApp green */
+  color: white;
+  border-radius: 50%;
+  padding: 2px 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  min-width: 20px;
+  text-align: center;
+}
+
+.unread-bold {
+  font-weight: 700 !important;
+  color: var(--text-main) !important;
+}
+
+/* Typing Indicator */
+.typing-text {
+  color: #25d366;
+  font-style: italic;
+  font-size: 0.8rem;
+}
+
+.typing-bubble {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 16px;
+  background-color: var(--bg-panel);
+}
+
+.typing-dot {
+  width: 6px;
+  height: 6px;
+  background-color: var(--text-secondary);
+  border-radius: 50%;
+  animation: typingBounce 1.4s infinite ease-in-out both;
+}
+
+.typing-dot:nth-child(1) { animation-delay: -0.32s; }
+.typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes typingBounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}
+
+/* Message Ticks */
+.message-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.message-time {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.message-status {
+  display: flex;
+  align-items: center;
+}
+
+.sent-tick {
+  color: #8696a0;
+}
+
+.read-tick {
+  color: #53bdeb; /* Blue tick color */
+}
+
+/* Reactions */
+.react-icon {
+  margin-right: 8px;
+  color: var(--text-secondary);
+}
+
+.react-icon:hover {
+  color: #fbbf24;
+}
+
+.reaction-popover {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  background-color: var(--bg-panel);
+  border-radius: 20px;
+  padding: 6px 12px;
+  display: flex;
+  gap: 8px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  z-index: 20;
+  margin-bottom: 8px;
+}
+
+.reaction-popover span {
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: transform 0.2s;
+}
+
+.reaction-popover span:hover {
+  transform: scale(1.3);
+}
+
+.reactions-display {
+  position: absolute;
+  bottom: -10px;
+  right: 10px;
+  background-color: var(--bg-panel);
+  border-radius: 12px;
+  padding: 2px 6px;
+  display: flex;
+  gap: 2px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  border: 1px solid var(--border-color);
+  font-size: 0.8rem;
+}
+
+/* Date Separator */
+.date-separator {
+  display: flex;
+  justify-content: center;
+  margin: 1rem 0;
+}
+
+.date-separator span {
+  background-color: var(--bg-panel);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  padding: 6px 12px;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
