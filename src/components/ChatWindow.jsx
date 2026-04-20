@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Send, Smile, Paperclip, MoreVertical, Trash2, Edit2, X, Check, CheckCheck, ArrowLeft } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
-import { deleteMessage, editMessage, setTypingStatus, resetUnreadCount, markMessagesAsRead, addReaction, toggleChatFreeze, db } from '../firebase';
+import { deleteMessage, editMessage, setTypingStatus, resetUnreadCount, markMessagesAsRead, addReaction, toggleChatFreeze, db, ADMIN_EMAIL } from '../firebase';
 import { collection, query, where, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, increment } from 'firebase/firestore';
+import VerifiedBadge from './VerifiedBadge';
 
 const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
 
@@ -101,6 +102,7 @@ export default function ChatWindow({ currentUser, selectedChat, onBack, isAdminS
         chatId: selectedChat.chatId,
         text: msgText,
         uid: currentUser.uid,
+        email: currentUser.email,
         displayName: currentUser.displayName,
         photoURL: currentUser.photoURL,
         status: 'sent',
@@ -111,6 +113,7 @@ export default function ChatWindow({ currentUser, selectedChat, onBack, isAdminS
       await updateDoc(doc(db, 'chats', selectedChat.chatId), {
         updatedAt: serverTimestamp(),
         lastMessage: msgText,
+        lastMessageSender: currentUser.uid,
         [`unreadCount.${selectedChat.uid}`]: increment(1)
       });
     } catch (err) {
@@ -170,10 +173,12 @@ export default function ChatWindow({ currentUser, selectedChat, onBack, isAdminS
           <img src={selectedChat.photoURL || 'https://via.placeholder.com/40'} alt="Chat Avatar" className="avatar" />
           <div className="chat-title-wrapper">
             <h2 className="chat-title">
-              {selectedChat.displayName} {selectedChat.isFrozen && <span className="frozen-tag">(Frozen)</span>}
+              {selectedChat.displayName} 
+              {(selectedChat.email === ADMIN_EMAIL || selectedChat.isOfficial) && <VerifiedBadge email={ADMIN_EMAIL} />}
+              {selectedChat.isFrozen && <span className="frozen-tag">(Frozen)</span>}
             </h2>
             <span className="chat-status">
-              {isAdminSpectator ? 'Admin Spectator Mode' : (isOtherTyping ? <span className="typing-text">typing...</span> : `@${selectedChat.username}`)}
+              {isAdminSpectator ? 'Admin Spectator Mode' : (isOtherTyping ? <span className="typing-text">typing...</span> : (selectedChat.isChannel ? 'Announcement Channel' : `@${selectedChat.username}`))}
             </span>
           </div>
         </div>
@@ -211,7 +216,12 @@ export default function ChatWindow({ currentUser, selectedChat, onBack, isAdminS
                 transition={{ duration: 0.2 }}
               >
                 <div className="message-bubble" onMouseLeave={() => {setDropdownOpen(null); setReactionOpen(null)}}>
-                  {!isSent && <span className="message-sender">{msg.displayName}</span>}
+                  {!isSent && (
+                    <span className="message-sender">
+                      {msg.displayName}
+                      <VerifiedBadge email={msg.email} size={12} />
+                    </span>
+                  )}
                   
                   {isEditing ? (
                     <div className="inline-edit">
@@ -315,6 +325,10 @@ export default function ChatWindow({ currentUser, selectedChat, onBack, isAdminS
       ) : selectedChat.isFrozen ? (
         <div className="frozen-chat-notice">
           <p>This chat has been frozen by an admin.</p>
+        </div>
+      ) : (selectedChat.isChannel && !selectedChat.adminIds?.includes(currentUser.uid)) ? (
+        <div className="frozen-chat-notice">
+          <p>Only admins can send messages in this channel.</p>
         </div>
       ) : (
         <form className="message-input-area" onSubmit={sendMessage}>

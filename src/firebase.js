@@ -106,7 +106,11 @@ export const saveUserToDB = async (user) => {
       displayName: user.displayName,
       photoURL: user.photoURL,
       username: username,
-      createdAt: serverTimestamp()
+      createdAt: serverTimestamp(),
+      settings: {
+        dndEnabled: false,
+        theme: 'light'
+      }
     });
   }
 };
@@ -122,6 +126,12 @@ export const checkUsernameExists = async (username) => {
 export const updateUsername = async (uid, newUsername) => {
   const userRef = doc(db, "users", uid);
   await updateDoc(userRef, { username: newUsername });
+};
+
+// Update user settings
+export const updateUserSettings = async (uid, settings) => {
+  const userRef = doc(db, "users", uid);
+  await updateDoc(userRef, { settings: settings });
 };
 
 // Search users by username
@@ -225,5 +235,41 @@ export const addReaction = async (messageId, uid, emoji) => {
     });
   } catch (error) {
     console.error("Error adding reaction:", error);
+  }
+};
+
+// --- Statuses (24hr) ---
+export const addStatus = async (user, text) => {
+  try {
+    await addDoc(collection(db, 'statuses'), {
+      uid: user.uid,
+      displayName: user.displayName,
+      username: user.username,
+      photoURL: user.photoURL,
+      email: user.email,
+      text: text,
+      createdAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error("Error adding status:", error);
+  }
+};
+
+// --- Channels (Announcements) ---
+export const createChannel = async (name, isPublic, isOfficial, user) => {
+  try {
+    const channelRef = await addDoc(collection(db, 'channels'), {
+      name: name,
+      isPublic: isPublic,
+      isOfficial: isOfficial,
+      adminIds: [user.uid],
+      participants: isPublic ? [] : [user.uid], // If public, anyone can view. If private, only participants.
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      lastMessage: ""
+    });
+    return channelRef.id;
+  } catch (error) {
+    console.error("Error creating channel:", error);
   }
 };

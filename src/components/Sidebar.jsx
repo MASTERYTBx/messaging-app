@@ -1,20 +1,34 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MoreVertical, MessageSquare, CircleDashed, ShieldAlert, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { ADMIN_EMAIL, searchUsersByUsername, getOrCreateChat, db } from '../firebase';
 import { collection, query, where, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
 import { motion } from 'framer-motion';
 import ProfileSettings from './ProfileSettings';
+import VerifiedBadge from './VerifiedBadge';
+import StatusModal from './StatusModal';
+import CreateChannelModal from './CreateChannelModal';
 
 export default function Sidebar({ user, logOut, selectedChat, onSelectChat }) {
   const navigate = useNavigate();
   const isAdmin = user?.email === ADMIN_EMAIL;
   
   const [showProfile, setShowProfile] = useState(false);
+  const [showStatus, setShowStatus] = useState(false);
+  const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [activeChats, setActiveChats] = useState([]);
+  const [channels, setChannels] = useState([]);
+  const [activeTab, setActiveTab] = useState('chats'); // 'chats' | 'channels'
   const [contextMenu, setContextMenu] = useState(null);
+
+  const selectedChatRef = useRef(selectedChat);
+  const dndEnabled = user?.settings?.dndEnabled || false;
+
+  useEffect(() => {
+    selectedChatRef.current = selectedChat;
+  }, [selectedChat]);
 
   // Close context menu on any click
   useEffect(() => {
@@ -27,8 +41,26 @@ export default function Sidebar({ user, logOut, selectedChat, onSelectChat }) {
     // Listen for chats where this user is a participant
     const q = query(collection(db, 'chats'), where('participants', 'array-contains', user.uid));
     const unsubscribe = onSnapshot(q, (snapshot) => {
+      
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === "modified") {
+          const data = change.doc.data();
+          // If message is from someone else and we aren't looking at the chat
+          if (data.lastMessageSender && data.lastMessageSender !== user.uid) {
+            if (selectedChatRef.current?.chatId !== change.doc.id) {
+              if (!dndEnabled && 'Notification' in window && Notification.permission === 'granted') {
+                new Notification('New Message', {
+                  body: data.lastMessage || 'Sent a message',
+                  icon: '/app-icon.svg'
+                });
+              }
+            }
+          }
+        }
+      });
+
       let chats = [];
-      snapshot.forEach(doc => {
+      snapshot.docs.forEach(doc => {
         chats.push({ ...doc.data(), id: doc.id });
       });
       // Sort by updatedAt descending
@@ -40,7 +72,29 @@ export default function Sidebar({ user, logOut, selectedChat, onSelectChat }) {
       setActiveChats(chats);
     });
     return () => unsubscribe();
-  }, [user]);
+  }, [user.uid, dndEnabled]);
+
+  useEffect(() => {
+    // Fetch channels
+    const q = query(collection(db, 'channels'));
+    const unsub = onSnapshot(q, (snapshot) => {
+      let fetched = [];
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data.isPublic || data.participants?.includes(user.uid) || data.adminIds?.includes(user.uid)) {
+           fetched.push({ id: docSnap.id, ...data });
+        }
+      });
+      // Sort by updatedAt
+      fetched.sort((a, b) => {
+        const timeA = a.updatedAt?.toMillis() || 0;
+        const timeB = b.updatedAt?.toMillis() || 0;
+        return timeB - timeA;
+      });
+      setChannels(fetched);
+    });
+    return () => unsub();
+  }, [user.uid]);
 
   const handleSearch = async (e) => {
     const term = e.target.value;
@@ -81,6 +135,7 @@ export default function Sidebar({ user, logOut, selectedChat, onSelectChat }) {
     onSelectChat({
       chatId,
       uid: targetUser.uid,
+      email: targetUser.email,
       displayName: targetUser.displayName,
       username: targetUser.username,
       photoURL: targetUser.photoURL
@@ -108,8 +163,8 @@ export default function Sidebar({ user, logOut, selectedChat, onSelectChat }) {
               title="Admin Panel"
             />
           )}
-          <CircleDashed className="action-icon" onClick={() => alert("Status updates coming soon!")} />
-          <MessageSquare className="action-icon" onClick={() => alert("New chat coming soon!")} />
+          <CircleDashed className="action-icon" onClick={() => setShowStatus(true)} title="Status Updates" />
+          <MessageSquare className="action-icon" onClick={() => setActiveTab('chats')} title="Chats" />
           <div className="dropdown">
             <MoreVertical className="action-icon" onClick={() => {
               if (window.confirm("Do you want to log out?")) logOut();
@@ -129,19 +184,78 @@ export default function Sidebar({ user, logOut, selectedChat, onSelectChat }) {
         />
       </div>
 
+      <div className="sidebar-tabs">
+        <button className={activeTab === 'chats' ? 'active' : ''} onClick={() => setActiveTab('chats')}>Chats</button>
+        <button className={activeTab === 'channels' ? 'active' : ''} onClick={() => setActiveTab('channels')}>Channels</button>
+      </div>
+
       <div className="contact-list">
         {searchQuery.length > 2 ? (
           <div className="search-results">
             {searchResults.length === 0 ? <p className="no-results">No users found</p> : null}
-            {searchResults.map(u => (
-              <div key={u.uid} className="contact-item" onClick={() => startChat(u)}>
+            {searchResults.map((u, i) => (
+              <motion.div 
+                key={u.uid} 
+                className="contact-item" 
+                onClick={() => startChat(u)}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.05 }}
+              >
                 <img src={u.photoURL || 'https://via.placeholder.com/48'} alt="Avatar" className="avatar" />
                 <div className="contact-info">
-                  <h3 className="contact-name">{u.displayName}</h3>
+                  <h3 className="contact-name">{u.displayName} <VerifiedBadge email={u.email} /></h3>
                   <p className="contact-last-message">@{u.username}</p>
                 </div>
-              </div>
+              </motion.div>
             ))}
+          </div>
+        ) : activeTab === 'channels' ? (
+          <div className="channels-list">
+            {isAdmin && (
+              <div style={{padding: '12px 16px', borderBottom: '1px solid var(--border-color)'}}>
+                <button 
+                  style={{width: '100%', padding: '8px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold'}}
+                  onClick={() => setShowCreateChannel(true)}
+                >
+                  + Create Channel
+                </button>
+              </div>
+            )}
+            {channels.length === 0 ? <p className="no-results">No channels available.</p> : null}
+            {channels.map(channel => {
+              const isActive = selectedChat?.chatId === channel.id;
+              return (
+                <motion.div 
+                  key={channel.id} 
+                  className={`contact-item ${isActive ? 'active' : ''}`} 
+                  onClick={() => onSelectChat({
+                    chatId: channel.id,
+                    isChannel: true,
+                    displayName: channel.name,
+                    username: 'channel',
+                    photoURL: 'https://via.placeholder.com/48/00a884/ffffff?text=CH',
+                    adminIds: channel.adminIds,
+                    isOfficial: channel.isOfficial
+                  })}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                >
+                  <img src='https://via.placeholder.com/48/00a884/ffffff?text=CH' alt="Channel" className="avatar" />
+                  <div className="contact-info">
+                    <div className="contact-info-header">
+                      <h3 className="contact-name">
+                        {channel.name} 
+                        {channel.isOfficial && <VerifiedBadge email={ADMIN_EMAIL} size={14} />}
+                      </h3>
+                    </div>
+                    <p className="contact-last-message">
+                      {channel.lastMessage || 'Channel created'}
+                    </p>
+                  </div>
+                </motion.div>
+              )
+            })}
           </div>
         ) : (
           <div className="active-chats">
@@ -153,7 +267,7 @@ export default function Sidebar({ user, logOut, selectedChat, onSelectChat }) {
               const unreadCount = chat.unreadCount?.[user.uid] || 0;
 
               return (
-                <div 
+                <motion.div 
                   key={chat.id} 
                   className={`contact-item ${isActive ? 'active' : ''}`} 
                   onClick={() => onSelectChat({
@@ -162,18 +276,24 @@ export default function Sidebar({ user, logOut, selectedChat, onSelectChat }) {
                     ...otherDetails
                   })}
                   onContextMenu={(e) => handleContextMenu(e, chat)}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
                 >
                   <img src={otherDetails?.photoURL || 'https://via.placeholder.com/48'} alt="Avatar" className="avatar" />
                   <div className="contact-info">
                     <div className="contact-info-header">
-                      <h3 className="contact-name">{otherDetails?.displayName} <span style={{fontSize: '0.75rem', color: '#8696a0'}}>@{otherDetails?.username}</span></h3>
+                      <h3 className="contact-name">
+                        {otherDetails?.displayName} 
+                        <VerifiedBadge email={otherDetails?.email} />
+                        <span style={{fontSize: '0.75rem', color: '#8696a0', marginLeft: '4px'}}>@{otherDetails?.username}</span>
+                      </h3>
                       {unreadCount > 0 && <span className="unread-badge">{unreadCount}</span>}
                     </div>
                     <p className={`contact-last-message ${unreadCount > 0 ? 'unread-bold' : ''}`}>
                       {chat.lastMessage || 'Start chatting!'}
                     </p>
                   </div>
-                </div>
+                </motion.div>
               )
             })}
           </div>
@@ -191,6 +311,8 @@ export default function Sidebar({ user, logOut, selectedChat, onSelectChat }) {
       )}
 
       {showProfile && <ProfileSettings user={user} onClose={() => setShowProfile(false)} />}
+      {showStatus && <StatusModal user={user} onClose={() => setShowStatus(false)} />}
+      {showCreateChannel && <CreateChannelModal user={user} onClose={() => setShowCreateChannel(false)} />}
     </motion.div>
   );
 }

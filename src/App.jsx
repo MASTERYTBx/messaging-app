@@ -25,6 +25,10 @@ function App() {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         await saveUserToDB(currentUser);
+        // Request Notification Permission
+        if ('Notification' in window && Notification.permission === 'default') {
+          Notification.requestPermission();
+        }
       }
       setUser(currentUser);
       setLoading(false);
@@ -33,15 +37,26 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user?.uid) return;
     const unsub = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
-      if (docSnap.exists() && docSnap.data().banned) {
-        alert("You have been banned from using this app.");
-        logOut();
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.banned) {
+          alert("You have been banned from using this app.");
+          logOut();
+        } else {
+          setUser(prev => ({...prev, settings: data.settings}));
+          
+          if (data.settings?.theme === 'dark') {
+            document.documentElement.classList.add('dark-mode');
+          } else {
+            document.documentElement.classList.remove('dark-mode');
+          }
+        }
       }
     });
     return () => unsub();
-  }, [user]);
+  }, [user?.uid]);
 
   if (loading) {
     return (
