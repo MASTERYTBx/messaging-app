@@ -41,7 +41,8 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Segoe UI", Roboto, sans-serif;
+  letter-spacing: -0.015em; /* Premium Apple-style tracking */
   background-color: var(--bg-app);
   color: var(--text-main);
   -webkit-font-smoothing: antialiased;
@@ -68,10 +69,11 @@ body {
 
 @media (min-width: 1024px) {
   .chat-layout {
-    height: 100vh;
-    top: 0;
-    border-radius: 0;
+    height: calc(100vh - 40px);
+    top: 20px;
+    border-radius: 24px;
     overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
   }
 }
 
@@ -87,8 +89,8 @@ body {
 .login-card {
   background-color: var(--bg-panel);
   padding: 3rem;
-  border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  border-radius: 24px;
+  box-shadow: 0 24px 48px rgba(0,0,0,0.08);
   text-align: center;
   max-width: 400px;
   width: 90%;
@@ -226,12 +228,13 @@ body {
 
 .search-input {
   width: 100%;
-  padding: 8px 12px;
+  padding: 10px 16px;
   background-color: var(--bg-header);
   border: none;
-  border-radius: 8px;
+  border-radius: 24px;
   color: var(--text-main);
   outline: none;
+  font-size: 0.95rem;
 }
 
 .contact-list {
@@ -335,8 +338,8 @@ body {
 .message-bubble {
   max-width: 75%;
   width: fit-content;
-  padding: 6px 8px 8px 10px;
-  border-radius: 8px;
+  padding: 10px 14px 12px 14px;
+  border-radius: 20px;
   box-shadow: var(--shadow-light);
   position: relative;
   display: flex;
@@ -346,12 +349,12 @@ body {
 .message-wrapper.sent .message-bubble {
   background-color: var(--msg-sent);
   color: var(--msg-sent-text);
-  border-top-right-radius: 0;
+  border-top-right-radius: 4px;
 }
 
 .message-wrapper.received .message-bubble {
   background-color: var(--msg-received);
-  border-top-left-radius: 0;
+  border-top-left-radius: 4px;
 }
 
 /* Hover Actions */
@@ -411,8 +414,8 @@ body {
   flex: 1;
   background-color: var(--bg-panel);
   border: none;
-  padding: 10px 15px;
-  border-radius: 8px;
+  padding: 12px 18px;
+  border-radius: 24px;
   color: var(--text-main);
   outline: none;
   font-size: 0.95rem;

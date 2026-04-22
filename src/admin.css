@@ -11,10 +11,10 @@
 
 @media (min-width: 1024px) {
   .admin-panel {
-    height: calc(100vh - 38px);
-    margin-top: 19px;
-    border-radius: 8px;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.1);
+    height: calc(100vh - 40px);
+    margin-top: 20px;
+    border-radius: 24px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
   }
 }
 
