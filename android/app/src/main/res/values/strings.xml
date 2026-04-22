@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">FluxChat</string>
+    <string name="title_activity_main">FluxChat</string>
+    <string name="package_name">com.fluxchat.app</string>
+    <string name="custom_url_scheme">com.fluxchat.app</string>
+</resources>

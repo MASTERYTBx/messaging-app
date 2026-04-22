@@ -1,0 +1,5 @@
+{
+  "appId": "com.fluxchat.app",
+  "appName": "FluxChat",
+  "webDir": "dist"
+}
