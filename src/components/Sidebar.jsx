@@ -272,6 +272,7 @@ export default function Sidebar({ user, logOut, selectedChat, onSelectChat }) {
                 return (
                   <motion.div 
                     key={`channel-${chat.id}`} 
+                    layout
                     className={`contact-item ${isActive ? 'active' : ''}`} 
                     onClick={() => onSelectChat({
                       chatId: chat.id,
@@ -282,8 +283,9 @@ export default function Sidebar({ user, logOut, selectedChat, onSelectChat }) {
                       adminIds: chat.adminIds,
                       isOfficial: chat.isOfficial
                     })}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 25 }}
                   >
                     <img src='https://via.placeholder.com/48/00a884/ffffff?text=CH' alt="Channel" className="avatar" />
                     <div className="contact-info">
@@ -310,6 +312,7 @@ export default function Sidebar({ user, logOut, selectedChat, onSelectChat }) {
               return (
                 <motion.div 
                   key={`chat-${chat.id}`} 
+                  layout
                   className={`contact-item ${isActive ? 'active' : ''}`} 
                   onClick={() => onSelectChat({
                     chatId: chat.id,
@@ -317,8 +320,9 @@ export default function Sidebar({ user, logOut, selectedChat, onSelectChat }) {
                     ...otherDetails
                   })}
                   onContextMenu={(e) => handleContextMenu(e, chat)}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 25 }}
                 >
                   <img src={otherDetails?.photoURL || 'https://via.placeholder.com/48'} alt="Avatar" className="avatar" />
                   <div className="contact-info">

@@ -10,10 +10,10 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['app-icon.svg', 'vite.svg'],
       manifest: {
-        name: 'Private Messaging',
-        short_name: 'ChatApp',
-        description: 'A private secure messaging app',
-        theme_color: '#00a884',
+        name: 'FluxChat',
+        short_name: 'FluxChat',
+        description: 'A premium flow-state messaging app',
+        theme_color: '#3b82f6',
         background_color: '#ffffff',
         display: 'standalone',
         icons: [

@@ -7,6 +7,7 @@ import { collection, query, where, onSnapshot, addDoc, serverTimestamp, updateDo
 import VerifiedBadge from './VerifiedBadge';
 import { useAlert } from './CustomAlert';
 import UserProfileModal from './UserProfileModal';
+import EmojiPicker from 'emoji-picker-react';
 
 const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
 
@@ -19,6 +20,7 @@ export default function ChatWindow({ currentUser, selectedChat, onBack, isAdminS
   const [reactionOpen, setReactionOpen] = useState(null);
   const [isOtherTyping, setIsOtherTyping] = useState(false);
   const [viewingProfile, setViewingProfile] = useState(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const { showAlert } = useAlert();
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
@@ -226,10 +228,11 @@ export default function ChatWindow({ currentUser, selectedChat, onBack, isAdminS
             return (
               <motion.div 
                 key={msg.id} 
+                layout
                 className={`message-wrapper ${isSent ? 'sent' : 'received'}`}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2 }}
+                initial={{ opacity: 0, y: 15, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
               >
                 <div className="message-bubble" onMouseLeave={() => {setDropdownOpen(null); setReactionOpen(null)}}>
                   {!isSent && (
@@ -353,13 +356,22 @@ export default function ChatWindow({ currentUser, selectedChat, onBack, isAdminS
           <p>Only admins can send messages in this channel.</p>
         </div>
       ) : (
-        <form className="message-input-area" onSubmit={sendMessage}>
-          <Smile className="input-icon" onClick={() => showAlert("Emoji picker coming soon!")} />
-          <Paperclip className="input-icon" onClick={() => showAlert("File attachments coming soon!")} />
-          <textarea 
-            className="message-input multi-line-input" 
-            placeholder="Type a message" 
-            value={text}
+        <div style={{ position: 'relative', width: '100%' }}>
+          {showEmojiPicker && (
+            <div style={{ position: 'absolute', bottom: '100%', left: '16px', zIndex: 100, marginBottom: '8px' }}>
+              <EmojiPicker 
+                onEmojiClick={(emojiData) => setText(prev => prev + emojiData.emoji)} 
+                theme={document.body.className === 'dark' ? 'dark' : 'auto'}
+              />
+            </div>
+          )}
+          <form className="message-input-area" onSubmit={sendMessage}>
+            <Smile className="input-icon" onClick={() => setShowEmojiPicker(!showEmojiPicker)} />
+            <Paperclip className="input-icon" style={{ display: 'none' }} onClick={() => showAlert("File attachments coming soon!")} />
+            <textarea 
+              className="message-input multi-line-input" 
+              placeholder="Type a message" 
+              value={text}
             onChange={handleTyping}
             rows={1}
             onKeyDown={(e) => {
@@ -377,6 +389,7 @@ export default function ChatWindow({ currentUser, selectedChat, onBack, isAdminS
             <Send className="send-icon" />
           </button>
         </form>
+      </div>
       )}
 
       {viewingProfile && (

@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Eye, ShieldAlert, Users, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ChatWindow from './ChatWindow';
+import VerifiedBadge from './VerifiedBadge';
 
 export default function AdminPanel({ user }) {
   const [activeTab, setActiveTab] = useState('conversations'); // 'conversations' | 'users'
@@ -59,12 +60,16 @@ export default function AdminPanel({ user }) {
       <div className="admin-chat-participants">
         <div className="participant-badge">
           <img src={users[0].photoURL || 'https://via.placeholder.com/30'} alt="" />
-          <span>{users[0].displayName} (@{users[0].username})</span>
+          <span style={{display: 'flex', alignItems: 'center', gap: '4px'}}>
+            {users[0].displayName} <VerifiedBadge email={users[0].email} size={12} /> (@{users[0].username})
+          </span>
         </div>
         <span className="participant-divider">↔</span>
         <div className="participant-badge">
           <img src={users[1].photoURL || 'https://via.placeholder.com/30'} alt="" />
-          <span>{users[1].displayName} (@{users[1].username})</span>
+          <span style={{display: 'flex', alignItems: 'center', gap: '4px'}}>
+            {users[1].displayName} <VerifiedBadge email={users[1].email} size={12} /> (@{users[1].username})
+          </span>
         </div>
       </div>
     );
@@ -186,7 +191,10 @@ export default function AdminPanel({ user }) {
                         <div className="admin-user-cell">
                           <img src={u.photoURL || 'https://via.placeholder.com/30'} alt="Avatar" />
                           <div>
-                            <strong>{u.displayName}</strong>
+                            <strong style={{display: 'flex', alignItems: 'center', gap: '4px'}}>
+                              {u.displayName} 
+                              <VerifiedBadge email={u.email} size={14} />
+                            </strong>
                             <div style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}>@{u.username}</div>
                           </div>
                         </div>

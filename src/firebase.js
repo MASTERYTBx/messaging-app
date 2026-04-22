@@ -156,15 +156,15 @@ export const getOrCreateChat = async (currentUser, targetUser) => {
     await setDoc(chatRef, {
       participants: [currentUser.uid, targetUser.uid],
       participantDetails: {
-        [currentUser.uid]: { 
-          displayName: currentUser.displayName, 
-          photoURL: currentUser.photoURL, 
+        [currentUser.uid]: {
+          displayName: currentUser.displayName,
+          photoURL: currentUser.photoURL,
           username: currentUser.username || currentUser.email.split('@')[0],
           email: currentUser.email
         },
-        [targetUser.uid]: { 
-          displayName: targetUser.displayName, 
-          photoURL: targetUser.photoURL, 
+        [targetUser.uid]: {
+          displayName: targetUser.displayName,
+          photoURL: targetUser.photoURL,
           username: targetUser.username,
           email: targetUser.email
         }
